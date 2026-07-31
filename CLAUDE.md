@@ -12,8 +12,8 @@ Build, Lattice Cloud, and ArenaSwap — not to sell anything. Nothing on it is i
 | `npm run build` | Static build to `dist/` |
 | `npm run preview` | Serve the built output |
 
-Deploy is automatic: `.github/workflows/astro.yml` builds on push to `main` and uploads
-`dist/` as the Pages artifact.
+Deploy is automatic: `.github/workflows/astro.yml` builds on push to `mega` — the default
+branch — and uploads `dist/` as the Pages artifact.
 
 ## Brand
 
