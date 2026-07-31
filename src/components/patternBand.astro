@@ -1,0 +1,55 @@
+---
+// The signature strip after the footer, carried over from the Lattice site: the left half
+// of the mark on ink, then a run of pattern rectangles flush beside it, so the logo reads
+// as the first tile in the series. Always ink with paper marks, in every theme.
+import { withBase } from '../lib/base';
+import { rotations, PRODUCT_ROTATIONS } from './rosette';
+
+interface Panel {
+	tile: string;
+	size: number; // background tile size in px
+}
+
+const panels: Panel[] = [
+	{ tile: withBase('/brand/pattern.svg'), size: 150 },
+	{ tile: withBase('/brand/patterns/rings.svg'), size: 96 },
+	{ tile: withBase('/brand/patterns/waves.svg'), size: 84 },
+	{ tile: withBase('/brand/patterns/weave.svg'), size: 64 },
+	{ tile: withBase('/brand/patterns/dots.svg'), size: 46 },
+	{ tile: withBase('/brand/patterns/chevrons.svg'), size: 64 },
+	{ tile: withBase('/brand/patterns/grid.svg'), size: 58 },
+];
+
+const marks = rotations(PRODUCT_ROTATIONS);
+---
+
+<section class="pattern-band" aria-hidden="true">
+	<div class="pattern-panel pattern-mark-panel">
+		<svg class="pattern-mark" viewBox="60 60 580 580">
+			{
+				marks.map((deg, i) => (
+					<ellipse
+						class="rosette-stroke"
+						cx="350"
+						cy="350"
+						rx="250"
+						ry="95"
+						pathLength="1"
+						transform={`rotate(${deg} 350 350)`}
+						stroke-width="15.635"
+						style={`animation-delay:${i * 0.07}s; stroke: var(--paper);`}
+					/>
+				))
+			}
+		</svg>
+	</div>
+
+	{
+		panels.map((p) => (
+			<div
+				class="pattern-panel pattern-tile"
+				style={`background-image:url('${p.tile}'); background-size:${p.size}px auto;`}
+			/>
+		))
+	}
+</section>

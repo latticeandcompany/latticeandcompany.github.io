@@ -1,0 +1,4 @@
+// Public-asset prefix for stylesheets. Sass can't read import.meta.env.BASE_URL, so
+// the one literal lives here and must match `base` in astro.config.mjs. This is the
+// org user-site, served from the bare origin, so the prefix is empty.
+$base: '';

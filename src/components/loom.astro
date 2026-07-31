@@ -1,0 +1,317 @@
+---
+// The hero. The Lattice mark comes apart into its three projects.
+//
+// Eight ellipses draw themselves, hold, and are then paid out: five settle as level ground,
+// three take an accent and braid around each other on the way past, and the same motion
+// carries them on out to a product. Each thread is one continuous line the whole time — the
+// coil, the bend, the braid and the run to a lockup are all one move — so there is no point at
+// which anything settles and then starts again. It is the brand architecture as a single
+// gesture: the parent is not a color, it is what the three came out of.
+//
+// All the geometry is in lib/loom.ts and is shared with the animation, so this file renders
+// the finished picture and the script only walks toward it. Without JavaScript, or under
+// prefers-reduced-motion, the finished picture is what you get.
+//
+// Alignment is structural. The panel is a fixed 11:5 box, so one user unit is the same
+// length across and down and the mark stays round at every width; three equal grid rows put
+// the lockups on the row centers the geometry aims at; and --loom-anchor is both the width
+// of the strand column and ANCHOR_X, so a strand ends where its lockup begins.
+import ProductLockup from './productLockup.astro';
+import { products } from '../lib/products';
+import { ANCHOR_X, GROUND_END, VH, VW, crossings, threadPath, threads } from '../lib/loom';
+
+const ground = threads.map((t, i) => ({ ...t, i })).filter((t) => t.product === null);
+const strands = threads
+	.map((t, i) => ({ ...t, i }))
+	.filter((t) => t.product !== null)
+	.map((t) => ({ ...t, product: products[t.product!]! }));
+
+const resolved = threads.map((_, i) => threadPath(i, 1));
+const overs = crossings();
+---
+
+<div
+	class="loom"
+	style={`--loom-anchor:${((ANCHOR_X / VW) * 100).toFixed(3)}%; aspect-ratio:${VW}/${VH};`}
+>
+	<svg viewBox={`0 0 ${VW} ${VH}`} preserveAspectRatio="none" class="loom-field" aria-hidden="true">
+		<defs>
+			{/*
+				Softens the ends of the five threads once they are lying flat. It cannot be on
+				while they are still part of the mark, which reaches past both ends of it — that
+				is what the animation's ground-edge opacity is for.
+			*/}
+			<linearGradient id="loomGround" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2={GROUND_END} y2="0">
+				<stop class="ground-edge" offset="0" />
+				<stop class="ground-core" offset="0.1" />
+				<stop class="ground-core" offset="0.82" />
+				<stop class="ground-edge" offset="1" />
+			</linearGradient>
+		</defs>
+
+		{
+			ground.map((t) => (
+				<path class="thread thread-ground" data-thread={t.i} d={resolved[t.i]} />
+			))
+		}
+
+		{/* The thread while it is still the mark: laid underneath in ink, a shade narrower so the
+			accent copy covers it completely, and fading out as the coil is used up. Two paths
+			rather than an interpolated stroke, so the color survives a theme swap. */}
+		{
+			strands.map((t) => (
+				<path class="thread thread-ink" data-thread-ink={t.i} d={resolved[t.i]} />
+			))
+		}
+
+		{/* And the same thread once it has been paid out. It is cut off at the bend, so a strand
+			takes its accent exactly where it stops being the mark and starts being a product. */}
+		{
+			strands.map((t) => (
+				<path
+					class:list={['thread', 'strand', `strand-${t.product.id}`, t.product.accentClass]}
+					data-thread={t.i}
+					d={resolved[t.i]}
+				/>
+			))
+		}
+
+		{/* Every casing first, then every fragment: a casing must never cut into the fragment
+			of a neighbouring crossing. */}
+		{
+			overs.map((c) => (
+				<path class="weave-cut" data-weave={c.x.toFixed(2)} data-pair={c.pair.join(',')} d={c.d} />
+			))
+		}
+		{
+			overs.map((c) => (
+				<path
+					class:list={['strand-over', `strand-${products[c.over]!.id}`, products[c.over]!.accentClass]}
+					data-weave={c.x.toFixed(2)}
+					data-pair={c.pair.join(',')}
+					d={c.d}
+				/>
+			))
+		}
+	</svg>
+
+	<ul class="loom-rows list-unstyled mb-0">
+		{
+			products.map((p) => (
+				<li class:list={['loom-row', `loom-row-${p.id}`, p.accentClass]}>
+					<a href={p.href} class="loom-link" aria-label={p.name}>
+						<ProductLockup wordmark={p.wordmark} fontSize="var(--lockup-size)" />
+					</a>
+				</li>
+			))
+		}
+	</ul>
+</div>
+
+{/*
+	Hide the resolved picture before it can paint, but only where it is about to be replaced
+	by the mark. If the animation module never arrives, the timeout hands the picture back.
+*/}
+<script is:inline>
+	(() => {
+		if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+		const el = document.currentScript?.previousElementSibling;
+		if (!el?.classList.contains('loom')) return;
+		el.setAttribute('data-anim', '');
+		setTimeout(() => el.removeAttribute('data-anim'), 2500);
+	})();
+</script>
+
+<script>
+	import {
+		MARK_STROKE,
+		VW,
+		bendAt,
+		drawOrder,
+		sAt,
+		settledAt,
+		threadPath,
+		threads,
+	} from '../lib/loom';
+
+	// There are only two timings in the whole hero: the mark drawing itself, and each thread
+	// being paid out of it afterwards. Everything else — where a crossing resolves, when a
+	// lockup arrives, when a strand takes its accent — is read off how far a thread has been
+	// paid out, so nothing can drift out of step with anything else.
+	const DRAW_T0 = 0.2;
+	const DRAW_STEP = 0.06;
+	const DRAW_DUR = 0.62;
+	// A beat on the finished mark before it lets go, so it registers as the logo first.
+	const PAY_T0 = 1.65;
+	const PAY_STEP = 0.16;
+	const PAY_DUR = 2.6;
+	const END = PAY_T0 + 7 * PAY_STEP + PAY_DUR + 0.1;
+
+	// How far along a strand its lockup shows up. Short of 1, so the name is there to be
+	// reached rather than appearing under the line that just landed on it.
+	const LINK_AT = 0.72;
+	// When the ink underneath gives out. Late: it is what is left of the mark, and it should not
+	// have faded away while there is still a coil to see.
+	const TINT_FROM = 0.55;
+	/** The ink copy runs narrower than the accent, so the accent hides it completely. */
+	const INK_TRIM = 0.9;
+
+	/** Final stroke weights, in px. Must match .strand and .thread-ground. */
+	const STRAND_W = 3;
+	const GROUND_W = 1;
+	const GROUND_OPACITY = 0.14;
+
+	const clamp = (t: number) => Math.min(1, Math.max(0, t));
+	const phase = (t: number, t0: number, dur: number) => clamp((t - t0) / dur);
+	// A steady sweep with soft ends: the pay-out should read as one continuous move, and a
+	// sharper ease makes it lunge in the middle.
+	const glide = (t: number) => 0.5 - 0.5 * Math.cos(Math.PI * t);
+	const easeOut = (t: number) => 1 - (1 - t) ** 3;
+	const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
+	const started = new WeakSet<Element>();
+
+	const animate = (root: HTMLElement) => {
+		if (started.has(root)) return;
+		started.add(root);
+
+		const paths = threads.map(
+			(_, i) => root.querySelector<SVGPathElement>(`[data-thread="${i}"]`)!
+		);
+		const inks = threads.map((_, i) =>
+			root.querySelector<SVGPathElement>(`[data-thread-ink="${i}"]`)
+		);
+		const weaves = [...root.querySelectorAll<SVGPathElement>('[data-weave]')];
+		const links = [...root.querySelectorAll<HTMLElement>('.loom-link')];
+		const edges = [...root.querySelectorAll<SVGStopElement>('.ground-edge')];
+		const settling = threads.filter((th) => th.product === null);
+		/** Thread index by product, so a crossing or a lockup can find its strands' progress. */
+		const byProduct = threads.reduce<number[]>((acc, th, i) => {
+			if (th.product !== null) acc[th.product] = i;
+			return acc;
+		}, []);
+
+		if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+			root.removeAttribute('data-anim');
+			return;
+		}
+
+		// The mark's stroke is proportional to the panel, the way it is wherever else the logo
+		// appears; the strands are hairlines that do not scale. Both are set in px because the
+		// paths carry vector-effect: non-scaling-stroke.
+		let markStroke = MARK_STROKE * (root.clientWidth / VW);
+		const observer = new ResizeObserver(() => {
+			markStroke = MARK_STROKE * (root.clientWidth / VW);
+		});
+		observer.observe(root);
+
+		const frame = (t: number) => {
+			const paid = threads.map((th) => glide(phase(t, PAY_T0 + th.order * PAY_STEP, PAY_DUR)));
+
+			// The ground's end-fade arrives with the ground itself. While any of those threads is
+			// still part of the mark the gradient has to be flat, or it eats the side of the logo.
+			const grounded =
+				settling.reduce((sum, th) => sum + paid[threads.indexOf(th)]!, 0) / settling.length;
+			edges.forEach((stop) => {
+				stop.style.stopOpacity = String(1 - grounded);
+			});
+
+			threads.forEach((th, i) => {
+				const path = paths[i]!;
+				const drawn = phase(t, DRAW_T0 + drawOrder(i) * DRAW_STEP, DRAW_DUR);
+				const m = paid[i]!;
+				const p = th.product;
+
+				const drawn2 = easeOut(drawn);
+				const width = lerp(markStroke, p === null ? GROUND_W : STRAND_W, m);
+
+				if (p === null) {
+					path.setAttribute('d', threadPath(i, m, drawn2));
+					path.style.strokeWidth = `${width}px`;
+					path.style.strokeOpacity = String(lerp(1, GROUND_OPACITY, m));
+					return;
+				}
+
+				// The accent reaches as far as the thread has been laid down; the ink underneath
+				// carries the rest of it and gives out as the coil does.
+				path.setAttribute('d', threadPath(i, m, Math.min(drawn2, bendAt(m))));
+				path.style.strokeWidth = `${width}px`;
+				const ink = inks[i];
+				if (ink) {
+					ink.setAttribute('d', threadPath(i, m, drawn2));
+					ink.style.strokeWidth = `${width * INK_TRIM}px`;
+					ink.style.opacity = String(1 - clamp((m - TINT_FROM) / (1 - TINT_FROM)));
+				}
+			});
+
+			// A crossing is real once both of its strands have been paid out through it, so the
+			// weave sets itself just behind the bend travelling along the braid.
+			weaves.forEach((el) => {
+				const s = sAt(Number(el.dataset.weave));
+				const [i, j] = el.dataset.pair!.split(',').map(Number) as [number, number];
+				el.style.opacity = String(
+					Math.min(settledAt(paid[byProduct[i]!]!, s), settledAt(paid[byProduct[j]!]!, s))
+				);
+			});
+
+			links.forEach((el, p) => {
+				const shown = settledAt(paid[byProduct[p]!]!, LINK_AT);
+				el.style.opacity = String(shown);
+				el.style.transform = `translateX(${(-8 * (1 - shown)).toFixed(2)}px)`;
+			});
+		};
+
+		// Frame zero is the mark. Paint it before handing the panel back, so nothing of the
+		// resolved picture is ever on screen.
+		frame(0);
+		root.removeAttribute('data-anim');
+
+		// Put the resolved shapes back and hand every animated property to the stylesheet, which
+		// already describes the finished picture. Resolving the shapes explicitly rather than
+		// trusting the last frame is what makes this safe to call at any point.
+		let done = false;
+		const finish = () => {
+			done = true;
+			observer.disconnect();
+			threads.forEach((_, i) => {
+				const d = threadPath(i, 1);
+				paths[i]!.setAttribute('d', d);
+				inks[i]?.setAttribute('d', d);
+			});
+			[...paths, ...inks, ...weaves, ...links, ...edges].forEach((el) => el?.removeAttribute('style'));
+		};
+
+		// Frame zero hides the lockups, so something has to be certain to show them again. A
+		// frame callback never arriving is not hypothetical — a tab loaded in the background
+		// gets none until it is looked at, and a headless renderer may get none at all.
+		const guard = setTimeout(finish, (END + 2) * 1000);
+
+		const t0 = performance.now();
+		const tick = (now: number) => {
+			if (done) return;
+			const t = (now - t0) / 1000;
+			frame(Math.min(t, END));
+			if (t < END) {
+				requestAnimationFrame(tick);
+				return;
+			}
+			clearTimeout(guard);
+			finish();
+		};
+		requestAnimationFrame(tick);
+	};
+
+	const run = () => {
+		document.querySelectorAll<HTMLElement>('.loom').forEach(animate);
+	};
+
+	// A client-side navigation swaps in fresh markup showing the resolved picture. after-swap
+	// runs before that paints, which is where it has to be hidden again.
+	document.addEventListener('astro:after-swap', () => {
+		if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+			document.querySelectorAll('.loom').forEach((el) => el.setAttribute('data-anim', ''));
+		}
+		run();
+	});
+	run();
+</script>

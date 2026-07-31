@@ -1,0 +1,78 @@
+---
+// The inverse of the Lattice product footer: there, the product lockup leads and the
+// parent is a small line in the bottom bar. Here the parent leads and the products are a
+// link column.
+//
+// Two things deliberately absent. The Lattice tagline, which belongs to Build and not to
+// the company. And the BRAND.md §7 endorsement line — that is for donated projects
+// signalling lineage upstream, so the parent using it on itself would be backwards.
+import ParentLockup from './parentLockup.astro';
+import { orgUrl } from '../lib/nav';
+import { products } from '../lib/products';
+
+const year = new Date().getFullYear();
+
+const columns = [
+	{
+		title: 'Projects',
+		links: products.map((p) => ({ name: p.name, href: p.href })),
+	},
+	{
+		title: 'Elsewhere',
+		links: [
+			{ name: 'GitHub', href: orgUrl, external: true },
+			{ name: 'Lattice docs', href: 'https://latticeandcompany.github.io/lattice/', external: true },
+			{ name: 'ArenaSwap site', href: 'https://hiteacheryouare.github.io/arenaswap/', external: true },
+		],
+	},
+];
+---
+
+<footer class="px-3 pt-5 pb-4" style="border-top: 1px solid var(--border);">
+	<div class="mx-auto" style="max-width: 72rem;">
+		<div class="row g-4">
+			<div class="col-12 col-lg-5">
+				{/* No line under the lockup. The Projects column beside it names all three. */}
+				<a href="/" class="text-decoration-none d-inline-block">
+					<ParentLockup fontSize="1.35rem" />
+				</a>
+			</div>
+
+			{
+				columns.map((col, i) => (
+					<div class:list={['col-6 col-lg-3', i === 0 && 'offset-lg-1']}>
+						<h3
+							class="text-uppercase mb-3"
+							style="font-size: 0.75rem; letter-spacing: 0.08em; color: var(--text-muted);"
+						>
+							{col.title}
+						</h3>
+						<ul class="list-unstyled d-flex flex-column gap-2 mb-0">
+							{col.links.map((link) => (
+								<li>
+									<a
+										href={link.href}
+										class="text-decoration-none"
+										style="color: var(--text-subtle);"
+										{...('external' in link && link.external
+											? { target: '_blank', rel: 'noopener noreferrer' }
+											: {})}
+									>
+										{link.name}
+									</a>
+								</li>
+							))}
+						</ul>
+					</div>
+				))
+			}
+		</div>
+
+		<div
+			class="mt-5 pt-4"
+			style="border-top: 1px solid var(--border-subtle); color: var(--text-muted); font-size: 0.875rem;"
+		>
+			<span>© {year} Lattice &amp; Co.</span>
+		</div>
+	</div>
+</footer>

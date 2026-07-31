@@ -1,0 +1,30 @@
+---
+// The parent-company signature: the 16-ellipse rosette beside `Lattice & Company` set in
+// DM Serif Text, ampersand stepped back into the gray ramp. Same construction the Lattice
+// and ArenaSwap footers already use, so the two properties agree on what the parent
+// looks like.
+//
+// The mark is never recolored and the wordmark is never set in DM Sans (BRAND.md §6).
+//
+// Rosette renders without a client directive: the draw-on-load is pure CSS, so the only
+// thing hydration would buy is replaying it after a view transition. The hero opts into
+// that; a nav or footer lockup does not need it.
+import Rosette from './rosette';
+
+interface Props {
+	/** Wordmark size. The mark is sized off it so the lockup scales as one thing. */
+	fontSize?: string;
+	markSize?: string;
+	animate?: boolean;
+	class?: string;
+}
+
+const { fontSize = '1.2rem', markSize, animate = false, class: className } = Astro.props;
+---
+
+<span class:list={['d-inline-flex align-items-center gap-2', className]}>
+	<Rosette size={markSize ?? `calc(${fontSize} * 1.35)`} animate={animate} title="Lattice & Company" />
+	<span class="latticeco-word" style={`font-size: ${fontSize};`} aria-hidden="true">
+		Lattice <span class="latticeco-amp">&amp;</span> Company
+	</span>
+</span>
