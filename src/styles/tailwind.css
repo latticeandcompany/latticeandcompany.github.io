@@ -17,8 +17,8 @@
    stay in sync with the rest of the theme switch. */
 @custom-variant dark (&:where([data-bs-theme='dark'], [data-bs-theme='dark'] *));
 
-/* Brand tokens (mirrors lattice/marketing/BRAND.md). Monochrome-first: ink/paper base,
-   the derived gray ramp, and the three product accents this site has to carry. */
+/* Brand tokens, mirroring _tokens.scss. Monochrome-first: ink/paper base, the derived
+   gray ramp, and the product accents. */
 @theme {
 	--color-transparent: transparent;
 	--color-current: currentColor;
@@ -38,6 +38,9 @@
 	--color-purple-300: #9a66e0;
 	--color-purple-500: #6622cc;
 	--color-purple-700: #4a1795;
+	--color-crimson-300: #e06a87;
+	--color-crimson-500: #ca2e55;
+	--color-crimson-700: #92203d;
 	--color-arena-300: #ff9a5c;
 	--color-arena-500: #f75c03;
 	--color-arena-700: #c43f00;

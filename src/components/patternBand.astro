@@ -3,7 +3,7 @@
 // of the mark on ink, then a run of pattern rectangles flush beside it, so the logo reads
 // as the first tile in the series. Always ink with paper marks, in every theme.
 import { withBase } from '../lib/base';
-import { rotations, PRODUCT_ROTATIONS } from './rosette';
+import { rotations } from '../lib/rosette';
 
 interface Panel {
 	tile: string;
@@ -20,7 +20,7 @@ const panels: Panel[] = [
 	{ tile: withBase('/brand/patterns/grid.svg'), size: 58 },
 ];
 
-const marks = rotations(PRODUCT_ROTATIONS);
+const marks = rotations();
 ---
 
 <section class="pattern-band" aria-hidden="true">

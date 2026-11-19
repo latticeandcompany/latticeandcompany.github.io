@@ -1,0 +1,198 @@
+---
+// The hero background. The server draws the resting weave as one SVG pattern tile, which
+// is all a reader with reduced motion or no JavaScript gets. Otherwise a canvas takes over,
+// draws the same weave, and winds the half-rosettes near the pointer.
+import { CLASSES, STRANDS, TILE_H, TILE_W, cellAt, halfStrandPath, strandAngle } from '../lib/weave';
+
+const tileCells = [-1, 0, 1, 2].flatMap((row) => [-1, 0, 1, 2].map((col) => cellAt(col, row)));
+
+const pieces = ([0, 1] as const).flatMap((half) =>
+	Array.from({ length: CLASSES }, (_, cls) => cls).flatMap((cls) =>
+		Array.from({ length: STRANDS }, (_, strand) => strand).flatMap((strand) =>
+			tileCells.filter((cell) => cell.cls === cls).map((cell) => halfStrandPath(cell, strandAngle(cell, strand), half)),
+		),
+	),
+);
+---
+
+<div class="weave" aria-hidden="true">
+	<svg class="weave-still">
+		<defs>
+			<pattern id="weave-tile" class="weave-tile" width={TILE_W} height={TILE_H} patternUnits="userSpaceOnUse">
+				{
+					pieces.map((d) => (
+						<>
+							<path class="weave-casing" d={d} />
+							<path class="weave-line" d={d} />
+						</>
+					))
+				}
+			</pattern>
+		</defs>
+		<rect width="100%" height="100%" fill="url(#weave-tile)"></rect>
+	</svg>
+	<canvas class="weave-live"></canvas>
+</div>
+
+<script>
+	import {
+		CASING_WIDTH,
+		CLASSES,
+		LINE_WIDTH,
+		MAX_SPIN,
+		NEAR_ALPHA,
+		REST_ALPHA,
+		STRAND_RX,
+		STRAND_RY,
+		STRANDS,
+		cellsCovering,
+		influence,
+		strandAngle,
+		type Cell,
+	} from '../lib/weave';
+
+	const EASE = 0.14;
+	const SETTLED = 0.0008;
+	const INTRO_SPREAD_MS = 1100;
+	const INTRO_CELL_MS = 900;
+
+	const easeOut = (t: number) => 1 - (1 - Math.min(1, Math.max(0, t))) ** 3;
+
+	const start = (root: HTMLElement) => {
+		const canvas = root.querySelector<HTMLCanvasElement>('.weave-live')!;
+		const ctx = canvas.getContext('2d')!;
+		const host = root.parentElement!;
+
+		let cells: Cell[] = [];
+		let order: number[][] = [];
+		let spin = new Float32Array(0);
+		let alpha = new Float32Array(0);
+		let reveal = new Float32Array(0);
+		let delay = new Float32Array(0);
+		let ink = '';
+		let surface = '';
+
+		const pointer = { x: 0, y: 0, strength: 0, target: 0 };
+		let frame = 0;
+		let visible = true;
+		const introStart = performance.now();
+		let introDone = false;
+
+		const readColors = () => {
+			const style = getComputedStyle(root);
+			ink = style.getPropertyValue('--text').trim();
+			surface = style.getPropertyValue('--surface').trim();
+		};
+
+		const layout = () => {
+			const { width, height } = root.getBoundingClientRect();
+			const dpr = window.devicePixelRatio || 1;
+			canvas.width = Math.round(width * dpr);
+			canvas.height = Math.round(height * dpr);
+			ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+			cells = cellsCovering(width, height);
+			order = Array.from({ length: CLASSES }, (_, cls) =>
+				cells.flatMap((cell, i) => (cell.cls === cls ? [i] : [])),
+			);
+			spin = new Float32Array(cells.length);
+			alpha = new Float32Array(cells.length).fill(REST_ALPHA);
+			reveal = new Float32Array(cells.length).fill(introDone ? 1 : 0);
+
+			// The weave grows out from behind the headline, in the bottom-left corner.
+			const far = Math.hypot(width, height);
+			delay = Float32Array.from(cells, (cell) => (Math.hypot(cell.x, height - cell.y) / far) * INTRO_SPREAD_MS);
+		};
+
+		const draw = () => {
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+			for (const half of [0, Math.PI]) {
+				for (const group of order) {
+					for (let strand = 0; strand < STRANDS; strand++) {
+						for (const i of group) {
+							const cell = cells[i];
+							ctx.beginPath();
+							const unwound = (reveal[i] - 1) * MAX_SPIN;
+							ctx.ellipse(cell.x, cell.y, STRAND_RX, STRAND_RY, strandAngle(cell, strand, spin[i] + unwound), half, half + Math.PI);
+							ctx.globalAlpha = 1;
+							ctx.lineCap = 'butt';
+							ctx.lineWidth = CASING_WIDTH;
+							ctx.strokeStyle = surface;
+							ctx.stroke();
+							ctx.globalAlpha = alpha[i] * reveal[i];
+							ctx.lineCap = 'round';
+							ctx.lineWidth = LINE_WIDTH;
+							ctx.strokeStyle = ink;
+							ctx.stroke();
+						}
+					}
+				}
+			}
+		};
+
+		const step = (now: number) => {
+			frame = 0;
+			pointer.strength += (pointer.target - pointer.strength) * 0.08;
+			let moved = Math.abs(pointer.target - pointer.strength);
+			if (!introDone) {
+				const elapsed = now - introStart;
+				for (let i = 0; i < cells.length; i++) reveal[i] = easeOut((elapsed - delay[i]) / INTRO_CELL_MS);
+				introDone = elapsed > INTRO_SPREAD_MS + INTRO_CELL_MS;
+				if (!introDone) moved = 1;
+			}
+			cells.forEach((cell, i) => {
+				const pull = influence(Math.hypot(pointer.x - cell.x, pointer.y - cell.y)) * pointer.strength;
+				const turn = (MAX_SPIN * pull - spin[i]) * EASE;
+				const fade = (REST_ALPHA + (NEAR_ALPHA - REST_ALPHA) * pull - alpha[i]) * EASE;
+				spin[i] += turn;
+				alpha[i] += fade;
+				moved = Math.max(moved, Math.abs(turn), Math.abs(fade));
+			});
+			draw();
+			if (moved > SETTLED) schedule();
+		};
+
+		const schedule = () => {
+			if (!frame && visible) frame = requestAnimationFrame(step);
+		};
+
+		const aim = (event: PointerEvent) => {
+			const box = root.getBoundingClientRect();
+			pointer.x = event.clientX - box.left;
+			pointer.y = event.clientY - box.top;
+			pointer.target = 1;
+			schedule();
+		};
+
+		host.addEventListener('pointermove', aim);
+		host.addEventListener('pointerdown', aim);
+		host.addEventListener('pointerleave', () => {
+			pointer.target = 0;
+			schedule();
+		});
+
+		new ResizeObserver(() => {
+			layout();
+			draw();
+		}).observe(root);
+
+		new MutationObserver(() => {
+			readColors();
+			draw();
+		}).observe(document.documentElement, { attributes: true, attributeFilter: ['data-bs-theme'] });
+
+		new IntersectionObserver(([entry]) => {
+			visible = entry.isIntersecting;
+			schedule();
+		}).observe(root);
+
+		readColors();
+		layout();
+		draw();
+		root.dataset.live = '';
+		schedule();
+	};
+
+	const root = document.querySelector<HTMLElement>('.weave');
+	if (root && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) start(root);
+</script>

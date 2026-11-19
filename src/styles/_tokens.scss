@@ -1,10 +1,10 @@
-// Brand tokens - the single source of color truth (mirrors lattice/marketing/BRAND.md).
+// Brand tokens - the single source of color truth, mirroring the Lattice site's _tokens.scss.
 // SCSS vars feed Bootstrap's variable overrides; the CSS custom properties feed
 // everything else and swap cleanly between light and dark.
 //
-// This is the parent-company site, so unlike the Lattice product site it carries all
-// three product accents at once. Per BRAND.md §1 the parent itself stays neutral: the
-// accents belong to the products, never to `Lattice & Company`.
+// This is the parent-company site, so unlike the product sites it carries every product
+// accent at once. The parent itself stays neutral: the accents belong to the products,
+// never to `Lattice & Company`.
 
 // Base - never pure #000 / #fff.
 $ink: #020d0c;
@@ -27,8 +27,12 @@ $purple-300: #9a66e0;
 $purple-500: #6622cc;
 $purple-700: #4a1795;
 
+$crimson-300: #e06a87;
+$crimson-500: #ca2e55;
+$crimson-700: #92203d;
+
 // ArenaSwap is a donated project and keeps its own orange (packages/ui/src/tailwind.css).
-// BRAND.md ships no ramp for it, so the tint and shade are derived here to the same
+// No ramp ships for it, so the tint and shade are derived here to the same
 // lightness relationship the teal and purple ramps use.
 $arena-300: #ff9a5c;
 $arena-500: #f75c03;
@@ -49,6 +53,9 @@ $arena-700: #c43f00;
 	--purple-300: #{$purple-300};
 	--purple-500: #{$purple-500};
 	--purple-700: #{$purple-700};
+	--crimson-300: #{$crimson-300};
+	--crimson-500: #{$crimson-500};
+	--crimson-700: #{$crimson-700};
 	--arena-300: #{$arena-300};
 	--arena-500: #{$arena-500};
 	--arena-700: #{$arena-700};
@@ -93,6 +100,11 @@ $arena-700: #c43f00;
 	--accent-link: var(--purple-700);
 }
 
+.accent-desktop {
+	--accent: var(--crimson-500);
+	--accent-link: var(--crimson-700);
+}
+
 .accent-arena {
 	--accent: var(--arena-500);
 	--accent-link: var(--arena-700);
@@ -104,6 +116,9 @@ $arena-700: #c43f00;
 	}
 	.accent-cloud {
 		--accent-link: var(--purple-300);
+	}
+	.accent-desktop {
+		--accent-link: var(--crimson-300);
 	}
 	.accent-arena {
 		--accent-link: var(--arena-300);

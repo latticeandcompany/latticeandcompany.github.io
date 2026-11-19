@@ -1,0 +1,16 @@
+---
+import ParentLockup from './parentLockup.astro';
+import ThemeControl from './themeControl';
+import { orgUrl } from '../lib/nav';
+import { withBase } from '../lib/base';
+---
+
+<header class="site-nav">
+	<a href={withBase('/')} class="text-decoration-none" aria-label="Lattice & Company">
+		<ParentLockup fontSize="1.05rem" />
+	</a>
+	<nav class="d-flex align-items-center gap-1" aria-label="Elsewhere">
+		<a class="nav-link-quiet px-2 py-1" href={orgUrl} target="_blank" rel="noopener noreferrer">GitHub</a>
+		<ThemeControl client:load />
+	</nav>
+</header>
