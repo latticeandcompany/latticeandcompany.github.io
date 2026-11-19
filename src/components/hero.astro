@@ -1,51 +1,21 @@
 ---
-// The sentence and the loom, and nothing else. The company's name is in the navbar an inch
-// above and in the mark the loom opens with, so repeating it here would be the third time.
-//
-// One column at every width: the sentence sets the measure, the loom runs the full width
-// under it. The stacking is what guarantees a strand can never cross the headline.
-import Loom from './loom.astro';
-import { orgUrl } from '../lib/nav';
+import Weave from './weave.astro';
+
+// Played once on load, in order, then the headline rests on the last.
+const audiences = ['developers', 'teams', 'sports fans'];
+const landing = 'everyone';
 ---
 
-<section id="top" class="hero px-3">
-	<div class="hero-grid mx-auto">
-		<h1 class="hero-lead display-serif">
-			We build software that intelligently connects systems together.
+<section class="hero">
+	<Weave />
+	<div class="hero-text">
+		<h1 class="hero-title">
+			Lattice &amp; Company makes <span class="text-nowrap">open-source</span> tools for
+			<span class="rotator" aria-hidden="true">
+				{audiences.map((word, i) => <span style={`--i: ${i};`}>{word}.</span>)}
+				<span class="rotator-landing" style={`--i: ${audiences.length};`}>{landing}.</span>
+			</span>
+			<span class="visually-hidden">{landing}.</span>
 		</h1>
-
-		<a href={orgUrl} target="_blank" rel="noopener noreferrer" class="btn btn-contrast px-4 mt-4">
-			<i class="bi bi-github me-2" aria-hidden="true"></i>GitHub
-		</a>
-
-		<Loom />
 	</div>
 </section>
-
-<style>
-	.hero {
-		padding-top: clamp(2.5rem, 6vw, 4.5rem);
-		padding-bottom: clamp(2.5rem, 7vw, 5rem);
-		/* The loom is a full-width box holding a narrower picture, and it shifts that picture
-		   right to center it. Nothing of the picture leaves the box, but the box's own empty
-		   tail does, and that would put a scrollbar on the page. */
-		overflow-x: hidden;
-		overflow-x: clip;
-	}
-
-	.hero-grid {
-		max-width: 72rem;
-	}
-
-	.hero-lead {
-		/* Two lines at every width the serif is set at here. */
-		max-width: 36rem;
-		margin: 0;
-		font-size: clamp(1.5rem, 3vw, 2.25rem);
-	}
-
-	/* The loom starts as the mark and ends three lines wide, so it needs its own air. */
-	.hero-grid :global(.loom) {
-		margin-top: clamp(1.5rem, 3vw, 2.5rem);
-	}
-</style>

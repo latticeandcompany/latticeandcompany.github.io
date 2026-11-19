@@ -4,18 +4,18 @@
 // link column.
 //
 // Two things deliberately absent. The Lattice tagline, which belongs to Build and not to
-// the company. And the BRAND.md §7 endorsement line — that is for donated projects
-// signalling lineage upstream, so the parent using it on itself would be backwards.
+// the company. And the `Built with ❤️ by Lattice` endorsement line — that is for donated
+// projects signalling lineage upstream, so the parent using it on itself would be backwards.
 import ParentLockup from './parentLockup.astro';
 import { orgUrl } from '../lib/nav';
-import { products } from '../lib/products';
+import { projects } from '../lib/projects';
 
 const year = new Date().getFullYear();
 
 const columns = [
 	{
 		title: 'Projects',
-		links: products.map((p) => ({ name: p.name, href: p.href })),
+		links: projects.map((p) => ({ name: p.name, href: p.href, external: true })),
 	},
 	{
 		title: 'Elsewhere',

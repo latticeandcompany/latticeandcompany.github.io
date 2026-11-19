@@ -85,7 +85,7 @@ samp {
 
 // ===== Lockups =====
 // The Lattice product lockup: lowercase `lattice` in DM Sans Medium beside the mark,
-// with the product word in the accent. `lattice` itself never takes a color (BRAND.md §1).
+// with the product word in the accent. `lattice` itself never takes a color.
 .product-wordmark {
 	font-weight: 500;
 	letter-spacing: var(--wordmark-tracking);
@@ -123,19 +123,6 @@ samp {
 
 	&.active {
 		color: var(--text);
-	}
-}
-
-// The one accent-colored link per product row. Uses --accent-link, not --accent: the
-// display shade fails AA at 16px (see the note in _tokens.scss).
-.link-accent {
-	color: var(--accent-link);
-	font-weight: 500;
-
-	&:hover,
-	&:focus {
-		color: var(--accent-link);
-		text-decoration: underline;
 	}
 }
 
@@ -204,202 +191,136 @@ samp {
 	animation: drawStroke 0.9s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
-// ===== Hero: the loom =====
-// The mark coming apart into its three projects. Eight ellipses draw themselves, turn, and
-// unravel: five lie down as the ground, three take an accent and braid around each other,
-// and the braid unwinds into three lines that land on the products.
-//
-// Everything here describes the *finished* picture, because that is what the server renders
-// and what a reader with no JavaScript or with prefers-reduced-motion gets. The animation in
-// loom.astro walks toward it with inline styles and drops them all at the end, so this
-// stylesheet is the single description of the resting state. The weights below are duplicated
-// as STRAND_W / GROUND_W / GROUND_OPACITY in that script; change them together.
-//
-// Alignment is structural: --loom-anchor (set inline from ANCHOR_X) is both the strand
-// column and the geometry's end, and .loom-rows is the same three-row division the geometry
-// aims at.
-.loom {
-	position: relative;
-	// The panel's aspect ratio is set inline from the viewBox, so one user unit is the same
-	// length across and down and the mark stays round at every width.
-	width: 100%;
+// ===== Shell =====
+// The footer's content box is 72rem with its gutter outside it; these match that edge.
+$content-max: calc(72rem + 2rem);
 
-	// The lockups are as wide as their type, which is a far bigger share of a phone's width
-	// than of a desktop's. So the picture ends well short of the right edge on a wide screen
-	// and fills a narrow one exactly. Measuring that leftover and splitting it centers the
-	// composition at every width, and leaves the geometry knowing nothing about type.
-	//
-	// 8.6em is the widest lockup plus its padding, rounded up: erring high keeps the picture
-	// inside the panel rather than pushing it past the edge.
-	--lockup-size: clamp(0.75rem, 3.3vw, 1.625rem);
-	--lockup-width: calc(8.6 * var(--lockup-size));
-	transform: translateX(max(0px, calc((100% - var(--loom-anchor) - var(--lockup-width)) / 2)));
+.site-nav {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	max-width: $content-max;
+	margin-inline: auto;
+	padding: 1rem 1rem 0;
 }
 
-.loom-field {
+// ===== Hero =====
+.hero {
+	position: relative;
+	display: flex;
+	align-items: flex-end;
+	min-height: clamp(32rem, calc(100svh - 4rem), 64rem);
+	overflow: hidden;
+}
+
+.hero-text {
+	position: relative;
+	width: 100%;
+	max-width: $content-max;
+	margin-inline: auto;
+	padding: 6rem 1rem clamp(3rem, 9vh, 7rem);
+}
+
+.hero-title {
+	@extend .display-serif;
+	margin: 0;
+	font-size: clamp(3rem, 0.6rem + 6.6vw, 7.75rem);
+	line-height: 0.98;
+	letter-spacing: -0.028em;
+	text-wrap: balance;
+}
+
+// The rotating last word sits on its own line, every word stacked in one grid cell, so the
+// lines above never reflow as it changes.
+.rotator {
+	display: grid;
+
+	> span {
+		grid-area: 1 / 1;
+		animation: wordPass 2.1s cubic-bezier(0.3, 0.7, 0.2, 1) both;
+		animation-delay: calc(0.9s + var(--i) * 1.9s);
+	}
+
+	> .rotator-landing {
+		animation-name: wordLand;
+		animation-duration: 0.8s;
+	}
+}
+
+@keyframes wordPass {
+	0% {
+		opacity: 0;
+		transform: translateY(0.3em);
+	}
+	18%,
+	78% {
+		opacity: 1;
+		transform: none;
+	}
+	100% {
+		opacity: 0;
+		transform: translateY(-0.3em);
+	}
+}
+
+@keyframes wordLand {
+	from {
+		opacity: 0;
+		transform: translateY(0.3em);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+// ===== Weave =====
+.weave {
+	position: absolute;
+	inset: 0;
+	mask-image: linear-gradient(to bottom, transparent, #000 14%, #000 72%, transparent);
+}
+
+.weave-still,
+.weave-live {
 	position: absolute;
 	inset: 0;
 	width: 100%;
 	height: 100%;
-	display: block;
-	// End caps sit on the right edge of the box.
-	overflow: visible;
-	// The braid comes out of nothing rather than starting on a cut edge.
-	mask-image: linear-gradient(to right, transparent 0%, black 7%);
-	-webkit-mask-image: linear-gradient(to right, transparent 0%, black 7%);
 }
 
-// Equal rows, so the centers the geometry aims at (1/6, 3/6, 5/6 of the panel) are exactly
-// the centers the lockups sit on. Absolute, because the panel's height comes from its aspect
-// ratio, not from this.
-.loom-rows {
-	position: absolute;
-	inset: 0;
-	z-index: 2;
-	display: grid;
-	grid-template-rows: repeat(3, 1fr);
-}
-
-.loom-row {
-	display: grid;
-	grid-template-columns: var(--loom-anchor) minmax(0, 1fr);
-	align-items: center;
-}
-
-.loom-link {
-	grid-column: 2;
-	justify-self: start;
-	display: inline-flex;
-	align-items: center;
-	text-decoration: none;
-	// Left padding is the only gap between the end of the strand and the lockup, kept tight
-	// so the two read as one object.
-	padding: 0.4rem 0.7rem 0.4rem 0.6rem;
-	border-radius: 6px;
-	transition: background 0.15s ease;
-}
-
-.loom-link:hover,
-.loom-link:focus-visible {
-	background: var(--surface-2);
-}
-
-// While the mark is about to take over, nothing of the resolved picture may paint. The
-// attribute is set before paint and removed on the animation's first frame.
-.loom[data-anim] .loom-field,
-.loom[data-anim] .loom-link {
-	visibility: hidden;
-}
-
-// Common to all eight threads.
-.thread {
-	fill: none;
-	stroke-linecap: round;
-	vector-effect: non-scaling-stroke;
-}
-
-// The five that settle. Faint enough to stay ground: the strands weave through each other,
-// not through these, so they must never compete.
-.thread-ground {
-	stroke: url('#loomGround');
-	stroke-width: 1;
-	stroke-opacity: 0.14;
-}
-
-// Gradient stops for the fade at each ground thread's ends. Set here rather than as
-// attributes so the color follows the theme.
-.ground-core {
-	stop-color: var(--text);
-	stop-opacity: 1;
-}
-
-.ground-edge {
-	stop-color: var(--text);
-	stop-opacity: 0;
-}
-
-.strand {
-	stroke: var(--accent);
-	stroke-width: 3;
-	transition: stroke-width 0.15s ease;
-}
-
-// The mark-colored copy of a strand, which the accent replaces during the unravelling.
-.thread-ink {
-	stroke: var(--mark);
-	stroke-width: 3;
-	opacity: 0;
-}
-
-// A crossing, drawn twice: a casing in the surface color that cuts a gap in whichever strand
-// passes behind, then the front strand's own short fragment on top of it.
-.weave-cut {
+// Widths and opacity mirror CASING_WIDTH, LINE_WIDTH and REST_ALPHA in src/lib/weave.ts.
+.weave-casing {
 	fill: none;
 	stroke: var(--surface);
-	stroke-width: 9;
-	stroke-linecap: butt;
-	vector-effect: non-scaling-stroke;
+	stroke-width: 5;
 }
 
-.strand-over {
+.weave-line {
 	fill: none;
-	stroke: var(--accent);
-	stroke-width: 3;
+	stroke: var(--text);
+	stroke-opacity: 0.2;
+	stroke-width: 1;
 	stroke-linecap: round;
-	vector-effect: non-scaling-stroke;
-	transition: stroke-width 0.15s ease;
 }
 
-// Pointing at a product thickens its strand, which is the only way to tell from the label
-// which line in the braid belongs to it.
-@each $id in (build, cloud, arenaswap) {
-	.loom:has(.loom-row-#{$id} .loom-link:hover) .strand-#{$id},
-	.loom:has(.loom-row-#{$id} .loom-link:focus-visible) .strand-#{$id} {
-		stroke-width: 4.5;
+.weave-live {
+	display: none;
+}
+
+:root[data-weave='pending'] .weave-still {
+	display: none;
+}
+
+.weave[data-live] {
+	.weave-still {
+		display: none;
 	}
-}
 
-// ===== Product rows =====
-.product-row {
-	border-top: 1px solid var(--border);
-}
-
-// ===== Product page body =====
-// Shared by /build, /cloud and /arenaswap so all three read as one set — including the
-// list markers, which take whichever accent the page has set.
-.page-body {
-	max-width: 40rem;
-	line-height: 1.7;
-	color: var(--text-subtle);
-	margin-bottom: 1.25rem;
-}
-
-.page-list {
-	max-width: 40rem;
-	line-height: 1.7;
-	color: var(--text-subtle);
-	margin: 2rem 0;
-	padding-left: 1.25rem;
-
-	li {
-		margin-bottom: 0.6rem;
-
-		&::marker {
-			color: var(--accent);
-		}
+	.weave-live {
+		display: block;
 	}
-}
-
-.code-sample {
-	background: var(--surface-2);
-	border: 1px solid var(--border-subtle);
-	border-radius: 8px;
-	padding: 1.25rem 1.5rem;
-	font-size: 0.875rem;
-	line-height: 1.7;
-	color: var(--text-subtle);
-	overflow-x: auto;
-	margin-bottom: 2rem;
 }
 
 // ===== Pattern band =====
@@ -449,12 +370,19 @@ samp {
 	background-position: center;
 }
 
-// Respect reduced-motion: show the final state, skip the drawing. The hero needs nothing
-// here - it is rendered resolved and its script does not start under this query.
+// Every animation on the page ends on the server-rendered picture, so turning them off
+// shows the finished state. The hero's canvas never starts under this query.
 @media (prefers-reduced-motion: reduce) {
 	.rosette-stroke {
 		stroke-dashoffset: 0;
 		animation: none;
+	}
+	.rotator > span {
+		opacity: 0;
+		animation: none;
+	}
+	.rotator > .rotator-landing {
+		opacity: 1;
 	}
 	html {
 		scroll-behavior: auto;

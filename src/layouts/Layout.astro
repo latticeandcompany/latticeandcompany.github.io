@@ -1,10 +1,9 @@
 ---
 import { SEO } from 'astro-seo';
-import { ClientRouter } from 'astro:transitions';
 import '../styles/tailwind.css';
 import '../styles/bootstrap.scss';
 import '../globals.scss';
-import Navbar from '../components/navbar';
+import Navbar from '../components/navbar.astro';
 import Footer from '../components/footer.astro';
 import PatternBand from '../components/patternBand.astro';
 import { withBase } from '../lib/base';
@@ -16,7 +15,7 @@ interface Props {
 
 const {
 	title = 'Lattice & Company',
-	description = 'Home of Lattice, Lattice Cloud, and ArenaSwap.',
+	description = 'Lattice & Company makes open-source tools for developers.',
 } = Astro.props;
 
 const favicon = withBase('/brand/favicon.svg');
@@ -31,7 +30,6 @@ const ogImage = new URL(withBase('/brand/og.png'), Astro.site).href;
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<link rel="icon" type="image/svg+xml" href={favicon} />
 		<meta name="generator" content={Astro.generator} />
-		<ClientRouter />
 		<SEO
 			title={title}
 			description={description}
@@ -54,12 +52,15 @@ const ogImage = new URL(withBase('/brand/og.png'), Astro.site).href;
 					document.documentElement.setAttribute('data-bs-theme', theme);
 				};
 				setTheme();
-				document.addEventListener('astro:after-swap', setTheme);
+				// The weave animates in from nothing, so its static fallback must not paint first.
+				if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+					document.documentElement.dataset.weave = 'pending';
+				}
 			})();
 		</script>
 	</head>
 	<body>
-		<Navbar client:load transition:persist />
+		<Navbar />
 		<main>
 			<slot />
 		</main>

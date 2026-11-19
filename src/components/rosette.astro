@@ -1,0 +1,36 @@
+---
+import { CENTER, RX, RY, STROKE_WIDTH, VIEWBOX, rotations } from '../lib/rosette';
+
+interface Props {
+	size?: string;
+	count?: number;
+	title?: string;
+	class?: string;
+}
+
+const { size = '3rem', count, title = 'Lattice & Company', class: className } = Astro.props;
+---
+
+<svg
+	xmlns="http://www.w3.org/2000/svg"
+	viewBox={VIEWBOX}
+	class={className}
+	style={`width: ${size}; height: ${size}; overflow: visible;`}
+	role="img"
+	aria-label={title}
+>
+	{
+		rotations(count).map((deg) => (
+			<ellipse
+				cx={CENTER}
+				cy={CENTER}
+				rx={RX}
+				ry={RY}
+				transform={`rotate(${deg} ${CENTER} ${CENTER})`}
+				fill="none"
+				stroke="var(--mark)"
+				stroke-width={STROKE_WIDTH}
+			/>
+		))
+	}
+</svg>
